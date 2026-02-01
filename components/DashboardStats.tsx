@@ -1,6 +1,6 @@
 
 import React, { useMemo } from 'react';
-import { Wallet, TrendingUp, PieChart as PieIcon } from 'lucide-react';
+import { Wallet, TrendingUp, PieChart as PieIcon, Calculator } from 'lucide-react';
 import { Subscription } from '../types';
 
 interface Props {
@@ -20,7 +20,19 @@ const CATEGORY_COLORS: Record<string, string> = {
 };
 
 const DashboardStats: React.FC<Props> = ({ subscriptions }) => {
-  const monthlyTotal = subscriptions.reduce((sum, sub) => sum + sub.price, 0);
+  // Normalize everything to monthly spend
+  const calculateMonthlyEffect = (sub: Subscription) => {
+    switch(sub.billingCycle) {
+      case 'Weekly': return (sub.price * 52) / 12;
+      case 'Quarterly': return sub.price / 3;
+      case 'Yearly': return sub.price / 12;
+      case 'One-time': return 0; // One-time doesn't affect recurring monthly budget
+      case 'Monthly':
+      default: return sub.price;
+    }
+  };
+
+  const monthlyTotal = subscriptions.reduce((sum, sub) => sum + calculateMonthlyEffect(sub), 0);
   const yearlyTotal = monthlyTotal * 12;
 
   const nextSub = [...subscriptions].sort((a, b) => 
@@ -30,12 +42,12 @@ const DashboardStats: React.FC<Props> = ({ subscriptions }) => {
   const categoryData = useMemo(() => {
     const totals: Record<string, number> = {};
     subscriptions.forEach(sub => {
-      totals[sub.category] = (totals[sub.category] || 0) + sub.price;
+      const effect = calculateMonthlyEffect(sub);
+      totals[sub.category] = (totals[sub.category] || 0) + effect;
     });
     
     return Object.entries(totals)
       .map(([name, value], index) => {
-        // Generate a stable color if it's a custom category
         const fallbackColors = ['#4f46e5', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899'];
         const color = CATEGORY_COLORS[name] || fallbackColors[index % fallbackColors.length];
         
@@ -46,6 +58,7 @@ const DashboardStats: React.FC<Props> = ({ subscriptions }) => {
           color
         };
       })
+      .filter(item => item.value > 0)
       .sort((a, b) => b.value - a.value);
   }, [subscriptions, monthlyTotal]);
 
@@ -55,17 +68,14 @@ const DashboardStats: React.FC<Props> = ({ subscriptions }) => {
     }).format(amount);
   };
 
-  // SVG Chart Logic
   let cumulativePercent = 0;
   const chartSlices = categoryData.map((item) => {
     const startPercent = cumulativePercent;
     cumulativePercent += item.percent;
-    
     const radius = 40;
     const circumference = 2 * Math.PI * radius;
     const offset = circumference - (item.percent / 100) * circumference;
     const rotation = (startPercent / 100) * 360;
-
     return { ...item, offset, circumference, rotation };
   });
 
@@ -80,12 +90,15 @@ const DashboardStats: React.FC<Props> = ({ subscriptions }) => {
             <div className="w-6 h-6 bg-indigo-50 rounded-lg flex items-center justify-center">
               <Wallet size={12} className="text-indigo-600" />
             </div>
-            <span className="text-slate-400 font-bold text-[10px] uppercase tracking-widest">Monthly Spend</span>
+            <span className="text-slate-400 font-bold text-[10px] uppercase tracking-widest">Monthly Budget</span>
           </div>
           <div className="flex items-baseline gap-2 relative z-10">
             <span className="text-4xl font-extrabold text-slate-900 tracking-tighter">₹{formatINR(monthlyTotal)}</span>
             <span className="text-slate-300 font-bold text-sm uppercase tracking-tight">INR</span>
           </div>
+          <p className="text-[10px] font-bold text-slate-400 mt-2 flex items-center gap-1">
+            <Calculator size={10} /> Effective recurring average
+          </p>
         </div>
 
         <div className="bg-white p-5 rounded-[32px] shadow-sm border border-white flex flex-col justify-between min-h-[100px]">
@@ -102,13 +115,13 @@ const DashboardStats: React.FC<Props> = ({ subscriptions }) => {
         </div>
       </div>
 
-      {subscriptions.length > 0 && (
+      {subscriptions.length > 0 && categoryData.length > 0 && (
         <div className="bg-white p-6 rounded-[40px] shadow-sm border border-white">
           <div className="flex items-center gap-2 mb-6">
              <div className="w-6 h-6 bg-rose-50 rounded-lg flex items-center justify-center">
               <PieIcon size={12} className="text-rose-500" />
             </div>
-            <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">Spending Breakdown</h3>
+            <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">Breakdown</h3>
           </div>
 
           <div className="flex flex-col sm:flex-row items-center gap-8">
@@ -135,20 +148,13 @@ const DashboardStats: React.FC<Props> = ({ subscriptions }) => {
                   />
                 ))}
               </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-                <span className="text-[10px] font-black text-slate-300 uppercase tracking-tighter">Budget</span>
-                <span className="text-xs font-black text-slate-900">Breakdown</span>
-              </div>
             </div>
 
             <div className="flex-1 w-full space-y-3">
-              {categoryData.map((item, i) => (
+              {categoryData.slice(0, 5).map((item, i) => (
                 <div key={i} className="flex items-center justify-between group">
                   <div className="flex items-center gap-3">
-                    <div 
-                      className="w-2.5 h-2.5 rounded-full shadow-sm group-hover:scale-125 transition-transform" 
-                      style={{ backgroundColor: item.color }} 
-                    />
+                    <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
                     <span className="text-sm font-bold text-slate-600">{item.name}</span>
                   </div>
                   <div className="text-right">

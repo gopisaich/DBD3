@@ -1,6 +1,6 @@
 
-import React, { useState, useEffect } from 'react';
-import { Trash2, Calendar, Bell, Check, Clock, Archive, Edit3, Search } from 'lucide-react';
+import React, { useState } from 'react';
+import { Trash2, Calendar, Edit3, Search, Clock } from 'lucide-react';
 import { Subscription } from '../types';
 
 interface Props {
@@ -12,7 +12,7 @@ interface Props {
   isHistory?: boolean;
 }
 
-const SubscriptionCard: React.FC<Props> = ({ subscription, onDelete, onEdit, onFixLogo, onArchive, isHistory }) => {
+const SubscriptionCard: React.FC<Props> = ({ subscription, onDelete, onEdit, onFixLogo, isHistory }) => {
   const [imageError, setImageError] = useState(false);
   const [isFixing, setIsFixing] = useState(false);
   
@@ -40,17 +40,6 @@ const SubscriptionCard: React.FC<Props> = ({ subscription, onDelete, onEdit, onF
     }).format(amount);
   };
 
-  const handleDeleteAction = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onDelete();
-  };
-
-  const handleEditAction = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if ('vibrate' in navigator) navigator.vibrate(10);
-    onEdit();
-  };
-
   const handleFixLogoAction = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!onFixLogo || isFixing) return;
@@ -61,41 +50,34 @@ const SubscriptionCard: React.FC<Props> = ({ subscription, onDelete, onEdit, onF
   };
 
   return (
-    <div 
-      className={`bg-white rounded-[32px] p-5 shadow-sm border border-white flex flex-col gap-4 relative overflow-hidden transition-all duration-300 hover:shadow-md ${isHistory ? 'opacity-70 grayscale-[0.2]' : ''}`}
-    >
-      <div 
-        className="absolute left-0 top-0 bottom-0 w-2 transition-all duration-300"
-        style={{ backgroundColor: subscription.color }}
-      />
+    <div className={`bg-white rounded-[32px] p-5 shadow-sm border border-white flex flex-col gap-4 relative overflow-hidden transition-all duration-300 hover:shadow-md ${isHistory ? 'opacity-70 grayscale-[0.2]' : ''}`}>
+      <div className="absolute left-0 top-0 bottom-0 w-2" style={{ backgroundColor: subscription.color }} />
 
       <div className="flex items-center gap-4">
-        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-inner overflow-hidden flex-shrink-0 bg-slate-50 border border-slate-100 p-2.5 transition-opacity relative group`}>
+        <div className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-inner overflow-hidden flex-shrink-0 bg-slate-50 border border-slate-100 p-2 relative group">
           {(subscription.logoUrl && !imageError) ? (
-            <img 
-              src={subscription.logoUrl} 
-              alt={subscription.name} 
-              className="w-full h-full object-contain"
-              onError={() => setImageError(true)}
-            />
+            <img src={subscription.logoUrl} alt={subscription.name} className="w-full h-full object-contain" onError={() => setImageError(true)} />
           ) : (
-            <div className="w-full h-full flex flex-col items-center justify-center rounded-xl text-white font-extrabold text-xl relative" style={{ backgroundColor: subscription.color }}>
+            <div className="w-full h-full flex items-center justify-center rounded-xl text-white font-extrabold text-xl" style={{ backgroundColor: subscription.color }}>
               {subscription.name.charAt(0)}
               {imageError && !isHistory && onFixLogo && (
-                <button 
-                  onClick={handleFixLogoAction}
-                  disabled={isFixing}
-                  className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"
-                >
-                  <Search size={20} className={isFixing ? 'animate-spin' : ''} />
+                <button onClick={handleFixLogoAction} disabled={isFixing} className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-xl">
+                  <Search size={20} className={isFixing ? 'animate-spin' : 'text-white'} />
                 </button>
               )}
             </div>
           )}
         </div>
         
-        <div className={`flex-1 min-w-0 transition-opacity`}>
-          <h3 className="font-extrabold text-slate-900 truncate text-base tracking-tight mb-0.5">{subscription.name}</h3>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-0.5">
+            <h3 className="font-extrabold text-slate-900 truncate text-base tracking-tight">{subscription.name}</h3>
+            {!isHistory && (
+              <span className="px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-500 text-[8px] font-black uppercase tracking-widest whitespace-nowrap">
+                {subscription.billingCycle}
+              </span>
+            )}
+          </div>
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1 text-[10px] text-slate-400 font-bold uppercase tracking-widest">
               <Calendar size={12} className="text-slate-300" />
@@ -104,51 +86,37 @@ const SubscriptionCard: React.FC<Props> = ({ subscription, onDelete, onEdit, onF
             {!isHistory && !isInvalidDate && (
                <div className="flex items-center gap-1 text-[10px] text-indigo-400 font-bold uppercase tracking-widest">
                 <Clock size={12} className="text-indigo-200" />
-                <span>{daysLeft <= 0 ? 'Ended' : `${daysLeft}D Left`}</span>
+                <span>{daysLeft <= 0 ? 'Due' : `${daysLeft}D`}</span>
               </div>
             )}
           </div>
         </div>
 
-        <div className={`text-right transition-opacity`}>
+        <div className="text-right flex flex-col items-end">
           <div className="font-black text-indigo-600 text-[17px] tracking-tighter">₹{formatINR(subscription.price)}</div>
-          {isHistory && <div className="text-[10px] font-black text-slate-300 uppercase">Archived</div>}
-        </div>
-
-        <div className="flex gap-2 relative z-20">
-          {!isHistory && (
-            <button 
-              type="button"
-              onClick={handleEditAction}
-              className={`h-12 w-12 rounded-[18px] flex items-center justify-center bg-slate-50 text-slate-400 active:scale-90 transition-all`}
-            >
-              <Edit3 size={18} strokeWidth={2} />
-            </button>
-          )}
-          <button 
-            type="button"
-            onClick={handleDeleteAction}
-            className={`h-12 w-12 rounded-[18px] flex items-center justify-center bg-slate-50 text-slate-400 active:scale-90 transition-all`}
-          >
-            <Trash2 size={18} strokeWidth={2} />
-          </button>
+          <div className="text-[8px] font-bold text-slate-300 uppercase">{isHistory ? 'Archived' : `per ${subscription.billingCycle.toLowerCase().replace('-time','')}`}</div>
         </div>
       </div>
 
-      {!isHistory && !isInvalidDate && daysLeft > 0 && (
-        <div className="space-y-1.5 px-1">
-           <div className="flex justify-between text-[9px] font-black text-slate-300 uppercase tracking-widest">
-            <span>Progress</span>
-            <span>{Math.round(progress)}%</span>
-          </div>
-          <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-            <div 
-              className="h-full rounded-full transition-all duration-1000"
-              style={{ width: `${progress}%`, backgroundColor: subscription.color }}
-            />
-          </div>
+      <div className="flex items-center justify-between gap-3 relative z-20">
+        <div className="flex-1">
+          {!isHistory && !isInvalidDate && daysLeft > 0 && (
+            <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+              <div className="h-full rounded-full transition-all duration-1000" style={{ width: `${progress}%`, backgroundColor: subscription.color }} />
+            </div>
+          )}
         </div>
-      )}
+        <div className="flex gap-2">
+          {!isHistory && (
+            <button onClick={(e) => { e.stopPropagation(); onEdit(); }} className="h-10 w-10 rounded-[15px] flex items-center justify-center bg-slate-50 text-slate-400 active:scale-90 transition-all border border-slate-100">
+              <Edit3 size={16} strokeWidth={2.5} />
+            </button>
+          )}
+          <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="h-10 w-10 rounded-[15px] flex items-center justify-center bg-slate-50 text-slate-400 active:scale-90 transition-all border border-slate-100">
+            <Trash2 size={16} strokeWidth={2.5} />
+          </button>
+        </div>
+      </div>
     </div>
   );
 };

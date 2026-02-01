@@ -1,6 +1,8 @@
 
 export const DEFAULT_CATEGORIES = ['Entertainment', 'Gaming', 'Education', 'Fitness', 'News', 'Work', 'Utility', 'Lifestyle', 'Other'];
 
+export type BillingCycle = 'Weekly' | 'Monthly' | 'Quarterly' | 'Yearly' | 'One-time';
+
 export interface Subscription {
   id: string;
   name: string;
@@ -9,6 +11,7 @@ export interface Subscription {
   renewalDate: string; // ISO string
   startDate: string; // ISO string
   endDate: string; // ISO string
+  billingCycle: BillingCycle;
   reminderDays: number;
   category: string;
   color: string;
